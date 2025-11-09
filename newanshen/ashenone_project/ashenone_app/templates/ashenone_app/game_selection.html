@@ -1,0 +1,41 @@
+{% extends 'ashenone_app/base.html' %}
+{% load static %}
+
+{% block title %}Select Game{% endblock %}
+
+{% block content %}
+
+<div class="flex flex-col items-center justify-center pt-10 pb-10 w-full max-w-6xl">
+    <h2 class="text-3xl font-bold text-yellow-500 mb-8 border-b border-gray-700 pb-2">CHOOSE YOUR REALM, TARNISHED</h2>
+    
+    {% comment %} Display Error messages if any (e.g., failed login attempts) {% endcomment %}
+    {% if messages %}
+        <div class="w-full mb-4">
+            {% for message in messages %}
+            <div class="p-3 mb-2 rounded-lg shadow-xl {% if message.tags == 'error' %}bg-red-800 text-white border border-red-600{% else %}bg-green-800 text-white border border-green-600{% endif %}" role="alert">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-6 lg:gap-8 w-full">
+        {% for game in GAMES_LIST %}
+        <a href="{% url 'game_dashboard' game_slug=game.slug %}" class="block bg-gray-800/70 hover:bg-gray-700/80 p-4 rounded-xl shadow-lg border border-gray-700 hover:border-yellow-500 transition duration-300 text-center transform hover:scale-105">
+            
+            <img 
+                src="{{ game.logo_url }}" 
+                alt="{{ game.name }} Logo" 
+                class="w-24 h-24 mx-auto mb-3 rounded-full border-2 border-gray-600 object-cover"
+            >
+            
+            <p class="text-lg font-semibold text-white">{{ game.name }}</p> 
+        </a>
+        {% endfor %}
+    </div>
+    
+    <!-- 🚀 FIX: เพิ่มส่วน ABOUT US ที่นี่ -->
+    {% include 'ashenone_app/about_us.html' %}
+</div>
+
+{% endblock content %}

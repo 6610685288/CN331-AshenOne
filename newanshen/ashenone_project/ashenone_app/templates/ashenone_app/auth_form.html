@@ -1,0 +1,45 @@
+<div class="max-w-xs w-full p-8 rounded-lg shadow-2xl text-gray-200 card-auth">
+    <h2 class="text-xl font-bold mb-6 text-center text-yellow-500">
+        {% if is_login %}กรุณาเข้าสู่ระบบ{% else %}ลงทะเบียนบัญชีใหม่{% endif %}
+    </h2>
+    
+    <form method="POST" action="{% url 'handle_auth' game_slug=game_slug %}" class="space-y-4">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="{% if is_login %}login{% else %}register{% endif %}">
+        
+       
+        <div>
+            <input type="text" name="username" required class="w-full input-style" placeholder="ป้อนชื่อผู้ใช้ของคุณ" aria-label="Username">
+        </div>
+        
+       
+        <div>
+            <input type="password" name="password" required class="w-full input-style" placeholder="ป้อนรหัสผ่าน (6+ ตัวอักษร)" aria-label="Password">
+        </div>
+        
+      
+        {% if not is_login %}
+        <div>
+            <input type="password" name="confirm_password" required class="w-full input-style" placeholder="ยืนยันรหัสผ่านอีกครั้ง" aria-label="Confirm Password">
+        </div>
+        {% endif %}
+
+        <button type="submit" class="w-full py-3 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg transition duration-200 uppercase tracking-wider shadow-lg shadow-red-500/30">
+            {% if is_login %}ดำเนินการต่อ{% else %}ลงทะเบียน{% endif %}
+        </button>
+    </form>
+    
+    <div class="flex items-center my-4">
+        <hr class="flex-grow border-t border-gray-700" />
+        <span class="px-2 text-sm text-gray-500">หรือ</span>
+        <hr class="flex-grow border-t border-gray-700" />
+    </div>
+
+    <a href="{% url 'game_dashboard' game_slug=game_slug %}?view={% if is_login %}register{% else %}login{% endif %}" class="w-full py-3 border border-gray-700 hover:bg-gray-800 text-yellow-500 font-semibold rounded-lg transition duration-200 block text-center">
+        {% if is_login %}ยังไม่มีบัญชี? ลงทะเบียน{% else %}มีบัญชีอยู่แล้ว? เข้าสู่ระบบ{% endif %}
+    </a>
+    
+    <p class="mt-4 text-xs text-gray-500 text-center">
+        หากดำเนินการต่อ หมายความว่าคุณยอมรับนโยบายในการให้บริการของ AshenOne...
+    </p>
+</div>

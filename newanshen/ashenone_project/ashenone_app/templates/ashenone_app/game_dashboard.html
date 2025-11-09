@@ -1,0 +1,53 @@
+{% extends 'ashenone_app/base.html' %}
+{% load static %}
+
+{% block title %}{{ current_game_name }}{% endblock %}
+
+{% block content %}
+<div class="w-full">
+    
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full mb-8">
+       
+        <div class="lg:col-span-3 p-6 bg-gray-800 rounded-xl shadow-2xl border border-gray-700">
+            <h2 class="text-2xl font-bold text-yellow-500 mb-4 border-b border-gray-700 pb-2">LORE & GUIDES: {{ current_game_name }}</h2>
+            <p class="text-gray-400 mb-4">
+                นี่คือพื้นที่สำหรับเนื้อหาทั่วไปของเกม {{ current_game_name }} ไม่ว่าจะเป็นบทสรุปเนื้อเรื่อง, ไกด์ Builds, หรือข้อมูลไอเท็มที่สำคัญ
+            </p>
+            
+            <div class="space-y-4">
+               
+                <div class="p-3 bg-gray-700/50 rounded-lg">
+                    <h3 class="font-semibold text-white">บทสรุป Lore: จุดเริ่มต้นและจุดจบ</h3>
+                    <p class="text-sm text-gray-400">เนื้อเรื่องซับซ้อนและน่าค้นหา อ่านสรุปย่อทั้งหมดได้ที่นี่...</p>
+                </div>
+            </div>
+            
+        </div> 
+    </div>
+
+    
+    <h2 class="text-3xl font-bold text-yellow-500 mb-8 border-b border-gray-700 pb-2">LFG & COMMUNITY POSTS</h2>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full">
+        
+        {% if user.is_authenticated %}
+       
+            <div class="lg:col-span-1">
+                {% include 'ashenone_app/lfg_post_form.html' %}
+            </div>
+        {% else %}
+         
+            <div class="lg:col-span-1">
+                <h3 class="text-xl font-bold text-gray-400 mb-4 text-center">LOGIN TO SUMMON HELP or POST!</h3>
+                {% include 'ashenone_app/auth_form.html' %}
+            </div>
+        {% endif %}
+        
+       
+        <div class="lg:col-span-2">
+            {% include 'ashenone_app/lfg_post_list.html' %}
+        </div>
+        
+    </div>
+</div>
+{% endblock content %}

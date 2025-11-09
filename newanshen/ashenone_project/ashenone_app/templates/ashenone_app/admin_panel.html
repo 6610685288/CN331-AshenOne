@@ -1,0 +1,82 @@
+{% extends 'ashenone_app/base.html' %}
+{% load static %}
+
+{% block title %}Admin Panel{% endblock %}
+
+{% block content %}
+
+<div class="w-full max-w-5xl">
+    <h2 class="text-3xl font-bold text-red-500 mb-6 border-b border-gray-700 pb-2">ADMINISTRATION PANEL</h2>
+    
+    <!-- Manage Users -->
+    <div class="mb-8 p-6 bg-gray-800 rounded-xl shadow-2xl border border-gray-700">
+        <h3 class="text-xl font-bold text-white mb-4">Manage Users ({{ all_users|length }} Total)</h3>
+        <table class="min-w-full text-sm text-left text-gray-400">
+            <thead class="text-xs text-gray-200 uppercase bg-gray-700">
+                <tr>
+                    <th scope="col" class="px-6 py-3">Username</th>
+                    <th scope="col" class="px-6 py-3">Role</th>
+                    <th scope="col" class="px-6 py-3">Status</th>
+                    <th scope="col" class="px-6 py-3">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in all_users %}
+                <tr class="bg-gray-600/50 border-b border-gray-700">
+                    <td class="px-6 py-4">{{ user.username }}</td>
+                    <td class="px-6 py-4">{{ user.role }}</td>
+                    <td class="px-6 py-4">
+                        {% if user.suspended %}
+                            <span class="text-red-500">Suspended</span>
+                        {% else %}
+                            <span class="text-green-500">Active</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if not user.suspended and user.role != 'admin' %}
+                        <form method="POST" action="{% url 'admin_panel' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="suspend_user">
+                            <input type="hidden" name="target_id" value="{{ user.uid }}">
+                            <button type="submit" class="font-medium text-red-400 hover:text-red-300">Suspend</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Manage Posts -->
+    <div class="p-6 bg-gray-800 rounded-xl shadow-2xl border border-gray-700">
+        <h3 class="text-xl font-bold text-white mb-4">Manage LFG Posts ({{ all_posts|length }} Total)</h3>
+        <table class="min-w-full text-sm text-left text-gray-400">
+            <thead class="text-xs text-gray-200 uppercase bg-gray-700">
+                <tr>
+                    <th scope="col" class="px-6 py-3">Game/Boss</th>
+                    <th scope="col" class="px-6 py-3">Posted By</th>
+                    <th scope="col" class="px-6 py-3">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for post in all_posts %}
+                <tr class="bg-gray-600/50 border-b border-gray-700">
+                    <td class="px-6 py-4">{{ post.game_name }} / {{ post.boss_name }}</td>
+                    <td class="px-6 py-4">{{ post.username }}</td>
+                    <td class="px-6 py-4">
+                        <form method="POST" action="{% url 'admin_panel' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete_post">
+                            <input type="hidden" name="target_id" value="{{ post.id }}">
+                            <button type="submit" class="font-medium text-yellow-400 hover:text-yellow-300">Delete</D>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock content %}

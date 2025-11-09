@@ -1,0 +1,32 @@
+<div class="p-6 bg-gray-800 rounded-xl shadow-2xl border border-gray-700">
+    <h2 class="text-2xl font-bold text-yellow-500 mb-4 border-b border-gray-700 pb-2">POST HELP REQUEST 🔔</h2>
+    <form method="POST" action="{% url 'handle_lfg_post' %}" class="space-y-4">
+        {% csrf_token %}
+        <input type="hidden" name="gameName" value="{{ current_game_name }}">
+        
+        <div>
+            <label class="block text-sm font-medium text-gray-400 mb-1">Platform</label>
+            <select name="platform" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white transition duration-200">
+                <option value="PC">PC</option>
+                <option value="PlayStation 5">PlayStation 5</option>
+                <option value="Xbox Series X/S">Xbox Series X/S</option>
+                <option value="PlayStation 4">PlayStation 4</option>
+                <option value="Xbox One">Xbox One</option>
+            </select>
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-400 mb-1">Boss/Area Name</label>
+            <input type="text" name="bossName" required class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-yellow-500" placeholder="e.g., Godrick the Grafted" />
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-400 mb-1">Details (Password, Strategy)</label>
+            <textarea name="description" required rows="3" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-yellow-500 resize-none" placeholder="Multiplayer Password: 1234. Looking for a tank build."></textarea>
+        </div>
+
+        <button type="submit" class="w-full py-3 bg-yellow-600 hover:bg-yellow-700 text-gray-900 font-bold rounded-lg transition duration-200 shadow-xl transform hover:scale-105">
+            POST HELP REQUEST
+        </button>
+    </form>
+</div>
