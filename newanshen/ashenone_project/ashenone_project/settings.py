@@ -45,7 +45,7 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [],
-        'APP_DIRS': True, # <-- สำคัญมาก: บอก Django ให้หา Template ใน App
+        'APP_DIRS': True, 
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',
@@ -59,9 +59,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'ashenone_project.wsgi.application'
 
-
-# Database
-# FIX: ใช้ dj_database_url.config() เพื่อให้ Fallback ไปใช้ SQLite3 เมื่อไม่มี ENV VAR
 DATABASES = {
     'default': dj_database_url.config(
         default='sqlite:///' + os.path.join(BASE_DIR, 'db.sqlite3'),
@@ -70,8 +67,6 @@ DATABASES = {
     )
 }
 
-
-
 AUTH_PASSWORD_VALIDATORS = [
     { 'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator', },
     { 'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', },
@@ -79,20 +74,16 @@ AUTH_PASSWORD_VALIDATORS = [
     { 'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator', },
 ]
 
-
-
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-
-
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles') 
 
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-
 AUTH_USER_MODEL = 'ashenone_app.CustomUser'
+
+CSRF_TRUSTED_ORIGINS = ['https://*.onrender.com']
