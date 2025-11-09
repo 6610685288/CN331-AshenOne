@@ -5,16 +5,15 @@ Django settings for ashenone_project project.
 
 from pathlib import Path
 import os
-import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # Quick-start development settings - unsuitable for production
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'default-key') 
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'
-ALLOWED_HOSTS = ['*']
+SECRET_KEY = 'django-insecure-dummy-key-for-ashenone-project' 
+DEBUG = True
+ALLOWED_HOSTS = []
 
 
 # Application definition
@@ -39,7 +38,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-     "whitenoise.middleware.WhiteNoiseMiddleware",
 ]
 
 ROOT_URLCONF = 'ashenone_project.urls'
@@ -64,17 +62,12 @@ WSGI_APPLICATION = 'ashenone_project.wsgi.application'
 
 
 # Database
-if not os.environ.get('DEBUG', 'False') == 'True':
-    DATABASES ={
-    'default': dj_database_url.parse(os.environ.get('DATABASE_URL'))
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3', # <-- ฐานข้อมูลจริง
     }
-else:
- DATABASES ={
- 'default': {
- 'ENGINE': 'django.db.backends.sqlite3',
- 'NAME': 'db.sqlite3',
-    }
- }
+}
 
 
 # Password validation (ใช้ค่าเริ่มต้น)
@@ -96,7 +89,6 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles') 
-STATICFILES_STORAGE ='whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
