@@ -14,14 +14,12 @@ TEAM MEMBERS
 
 ITERATION 1 (ไฟล์เว็ป รายงาน ลิงก์github) [09/11/2568]
 
-1. https://cn331-ashenone.vercel.app/
-2. file:///C:/Users/purid/Desktop/working/cn331/AshenOne/notcode/AshenOne_Iteration1.pdf
+1. https://cn331-ashenone-1-p0fj.onrender.com
+2. https://drive.google.com/file/d/1e6_kIb6sVekTYEOJ7ewdnTtkz6dGvcwX/view?usp=sharing
 3. https://github.com/6610685288/CN331-AshenOne
 
 แก้ไข USER STORIES บางส่วนที่ไม่ครอบคลุม ทำการเขียนเว็ปและ test ดูได้ในรายงานตามที่แนบ
 
-
 ITERATION 2 (On process)
-
 
 ITERATION 3 (On process)
