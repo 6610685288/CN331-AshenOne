@@ -1,9 +1,18 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.contrib import messages
 from django.contrib.auth import login, logout as auth_logout, authenticate
 from django.contrib.auth.decorators import login_required
-from .models import GAMES_LIST, LFGPost, CustomUser # Import ORM Models
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.utils import timezone
+from .models import GAMES_LIST, LFGPost, CustomUser, Offer, ChatMessage, GuideContent 
+import logging
+import json
+from django.db.models import Prefetch
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+
+logger = logging.getLogger(__name__)
 
 # --- 1. Game Selection & Main Dashboard (Guest/User) ---
 
@@ -15,31 +24,61 @@ def index(request):
     return render(request, 'ashenone_app/game_selection.html', context)
 
 def game_dashboard(request, game_slug):
- 
+
     game_info = next((g for g in GAMES_LIST if g['slug'] == game_slug), None)
     if not game_info:
+        messages.error(request, "Game not found.")
         return redirect('index')
 
     current_game_name = game_info['name']
     
- 
-    posts = LFGPost.objects.filter(game_name=current_game_name).order_by('-created_at')
+    # --- LFG POSTS LOGIC ---
+    posts_qs = LFGPost.objects.filter(game_name=current_game_name).order_by('-created_at')
     
-  
+    if request.user.is_authenticated:
+        user_offers = Offer.objects.filter(offered_by=request.user)
+        posts_qs = posts_qs.prefetch_related(
+            Prefetch('offers', queryset=user_offers, to_attr='current_user_offers')
+        )
+    
+    posts_page_num = request.GET.get('posts_page', 1) 
+    posts_paginator = Paginator(posts_qs, 5) 
+    try:
+        posts = posts_paginator.page(posts_page_num)
+    except PageNotAnInteger:
+        posts = posts_paginator.page(1)
+    except EmptyPage:
+        posts = posts_paginator.page(posts_paginator.num_pages)
+
+
+    # --- CONTENT LIST LOGIC ---
+    content_list_qs = GuideContent.objects.filter(game_name=current_game_name).order_by('category', 'title')
+
+    content_page_num = request.GET.get('content_page', 1) 
+    content_paginator = Paginator(content_list_qs, 5) 
+    try:
+        content_list = content_paginator.page(content_page_num)
+    except PageNotAnInteger:
+        content_list = content_paginator.page(1)
+    except EmptyPage:
+        content_list = content_paginator.page(content_paginator.num_pages)
+    
+    
     view_type = request.GET.get('view', 'login')
     
     context = {
         'current_game_name': current_game_name,
         'game_slug': game_slug,
         'user': request.user, 
-        'posts': posts,
+        'posts': posts, 
+        'content_list': content_list, 
         'view_type': view_type,
         'is_login': view_type == 'login'
     }
     
     return render(request, 'ashenone_app/game_dashboard.html', context)
 
-# --- 2. Authentication (US-U1) ---
+# --- 2. Authentication ---
 
 def handle_auth(request, game_slug):
   
@@ -93,14 +132,11 @@ def handle_auth(request, game_slug):
     return redirect('game_dashboard', game_slug=game_slug)
 
 def logout(request):
-    """
-    View 4: จัดการการ Logout (ใช้ Django Auth)
-    """
     auth_logout(request)
     messages.success(request, "คุณออกจากระบบเรียบร้อยแล้ว")
     return redirect('index')
 
-# --- 3. LFG Post Management (US-U2) ---
+# --- 3. LFG Post Management ---
 
 @login_required(login_url='/') 
 def handle_lfg_post(request):
@@ -133,3 +169,129 @@ def handle_lfg_post(request):
         messages.success(request, "สร้างโพสต์ LFG สำเร็จ!")
     
     return redirect('game_dashboard', game_slug=game_slug)
+
+@login_required(login_url='/')
+def offer_help(request, post_id):
+    if request.method != 'POST':
+        return redirect('index')
+
+    post = get_object_or_404(LFGPost, id=post_id) 
+    game_slug = next((g['slug'] for g in GAMES_LIST if g['name'] == post.game_name), 'index')
+    
+    if post.user == request.user:
+        messages.error(request, "ไม่สามารถเสนอช่วยเหลือโพสต์ที่คุณสร้างเองได้")
+        return redirect('game_dashboard', game_slug=game_slug)
+        
+    existing_offer = Offer.objects.filter(post=post, offered_by=request.user).first()
+
+    if existing_offer:
+        messages.info(request, f"คุณได้เสนอความช่วยเหลือโพสต์นี้ไปแล้ว (เข้าสู่ห้องแชท: {post.boss_name})")
+        return redirect('chat_room', post_id=post.id) 
+        
+    try:
+        Offer.objects.create(
+            post=post,
+            offered_by=request.user,
+            message=f"{request.user.username} offers assistance for {post.boss_name}"
+        )
+
+        if post.status == 'Active':
+            post.status = 'In Progress'
+            post.save() 
+            messages.success(request, f"เสนอความช่วยเหลือสำเร็จ! สถานะโพสต์: In Progress. เริ่มแชทได้เลย: {post.boss_name}")
+        else:
+            messages.info(request, f"เสนอความช่วยเหลือสำเร็จ! โพสต์นี้กำลังดำเนินการอยู่. เข้าห้องแชท: {post.boss_name}")
+        
+    except Exception as e:
+        messages.error(request, "เกิดข้อผิดพลาดในการบันทึกการเสนอช่วยเหลือ")
+        logger.error(f"Error creating offer: {e}")
+        return redirect('game_dashboard', game_slug=game_slug)
+    
+    return redirect('chat_room', post_id=post.id)
+
+@login_required(login_url='/')
+def chat_room_view(request, post_id):
+    post = get_object_or_404(LFGPost, id=post_id) 
+    
+    is_owner = post.user == request.user
+    has_offered = Offer.objects.filter(post=post, offered_by=request.user).exists()
+    
+    if not is_owner and not has_offered:
+        messages.error(request, "คุณไม่มีสิทธิ์เข้าถึงห้องแชทนี้")
+        return redirect('game_dashboard', game_slug=next((g['slug'] for g in GAMES_LIST if g['name'] == post.game_name), 'index'))
+
+    helpers = CustomUser.objects.filter(help_offered__post=post).distinct()
+
+    participants = list(helpers)
+    if post.user not in participants:
+        participants.insert(0, post.user)
+
+    context = {
+        'post': post,
+        'game_name': post.game_name,
+        'is_owner': is_owner,
+        'participants': participants, 
+        'member_count': len(participants),
+        'last_message_time': timezone.now().isoformat() 
+    }
+    return render(request, 'ashenone_app/chat_room.html', context)
+
+@login_required(login_url='/')
+def chat_list_view(request):
+    user_related_posts = LFGPost.objects.get_user_related_posts(request.user)
+    
+    context = {
+        'posts': user_related_posts,
+    }
+    return render(request, 'ashenone_app/chat_list.html', context)
+
+@login_required(login_url='/')
+@require_POST
+def send_message_api(request, post_id):
+    post = get_object_or_404(LFGPost, id=post_id)
+    
+    try:
+        data = json.loads(request.body)
+        content = data.get('content')
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
+    
+    if not content:
+        return JsonResponse({'status': 'error', 'message': 'Content cannot be empty'}, status=400)
+    
+    ChatMessage.objects.create(
+        post=post,
+        sender=request.user,
+        content=content
+    )
+    
+    return JsonResponse({'status': 'success', 'message': 'Message sent'})
+
+
+@login_required(login_url='/')
+def fetch_messages_api(request, post_id):
+    post = get_object_or_404(LFGPost, id=post_id)
+    
+    messages_query = ChatMessage.objects.filter(post=post)
+    
+    messages_list = [
+        {
+            'sender': msg.sender.username,
+            'content': msg.content,
+            'timestamp': msg.timestamp.strftime("%H:%M:%S"),
+            'is_me': msg.sender == request.user
+        }
+        for msg in messages_query
+    ]
+    
+    return JsonResponse({'messages': messages_list, 'status': 'success'})
+
+def content_detail(request, game_slug, content_slug):
+    content = get_object_or_404(GuideContent, slug=content_slug)
+    
+    context = {
+        'content': content,
+        'game_slug': game_slug,
+        'current_game_name': content.game_name
+    }
+    return render(request, 'ashenone_app/content_detail.html', context)

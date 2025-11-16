@@ -1,0 +1,44 @@
+{% extends 'ashenone_app/base.html' %}
+{% load static %}
+
+{% block title %}Active Chats{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-4xl pt-4 pb-10">
+    <h2 class="text-3xl font-bold text-yellow-500 mb-6 border-b border-gray-700 pb-2">
+        ACTIVE CHAT THREADS 💬
+    </h2>
+    <p class="text-gray-400 mb-6">
+        นี่คือโพสต์ LFG ที่คุณเป็นเจ้าของ (Requester) หรือเคยเสนอความช่วยเหลือ (Helper)
+    </p>
+
+    <div class="space-y-4">
+        {% if posts %}
+            {% for post in posts %}
+            <a href="{% url 'chat_room' post_id=post.id %}" class="block p-4 bg-gray-800 hover:bg-gray-700/70 rounded-xl shadow-lg border border-gray-700 transition duration-200">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-xl font-semibold text-white">
+                        {{ post.boss_name }} ({{ post.game_name }})
+                        {% if post.user == request.user %}
+                            <span class="ml-2 text-xs font-medium px-2 py-0.5 rounded-full bg-red-600 text-white">OWNER</span>
+                        {% else %}
+                            <span class="ml-2 text-xs font-medium px-2 py-0.5 rounded-full bg-green-600 text-white">HELPER</span>
+                        {% endif %}
+                    </h3>
+                    <span class="text-sm text-yellow-400 font-mono">{{ post.platform }}</span>
+                </div>
+                <p class="text-gray-400 text-sm mt-1">
+                    โพสต์โดย: {{ post.user.username }} | สถานะ: {{ post.status }}
+                </p>
+            </a>
+            {% endfor %}
+        {% else %}
+            <div class="p-8 bg-gray-800 rounded-xl shadow-inner border border-gray-700">
+                <p class="text-gray-400 italic text-center">
+                    คุณยังไม่มีห้องแชทที่กำลังใช้งานอยู่. ไปที่หน้า Dashboard เพื่อสร้างโพสต์ LFG หรือ Offer Help ให้กับคนอื่น!
+                </p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock content %}

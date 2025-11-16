@@ -6,19 +6,35 @@
 {% block content %}
 
 <div class="flex flex-col items-center justify-center pt-10 pb-10 w-full max-w-6xl">
-    <h2 class="text-3xl font-bold text-yellow-500 mb-8 border-b border-gray-700 pb-2">CHOOSE YOUR REALM, TARNISHED</h2>
     
-    {% comment %} Display Error messages if any (e.g., failed login attempts) {% endcomment %}
+    {# 🛡️ MESSAGES FRAMEWORK DISPLAY (ข้อความแจ้งเตือน/ผิดพลาด) #}
     {% if messages %}
-        <div class="w-full mb-4">
+        <div class="w-full mb-8">
             {% for message in messages %}
-            <div class="p-3 mb-2 rounded-lg shadow-xl {% if message.tags == 'error' %}bg-red-800 text-white border border-red-600{% else %}bg-green-800 text-white border border-green-600{% endif %}" role="alert">
-                {{ message }}
-            </div>
+                {% comment %} ใช้ Tailwind CSS จัดรูปแบบตาม message tags {% endcomment %}
+                {% if message.tags == 'error' %}
+                    <div class="p-4 bg-red-800/90 text-white border-l-4 border-red-500 rounded-lg shadow-2xl transition duration-300 transform hover:scale-[1.01]" role="alert">
+                        <p class="font-bold">Access Denied:</p>
+                        <p class="text-sm">{{ message }}</p>
+                    </div>
+                {% elif message.tags == 'success' %}
+                    <div class="p-4 bg-green-800/90 text-white border-l-4 border-green-500 rounded-lg shadow-2xl transition duration-300 transform hover:scale-[1.01]" role="alert">
+                        <p class="font-bold">Success:</p>
+                        <p class="text-sm">{{ message }}</p>
+                    </div>
+                {% else %}
+                    <div class="p-4 bg-blue-800/90 text-white border-l-4 border-blue-500 rounded-lg shadow-2xl transition duration-300 transform hover:scale-[1.01]" role="alert">
+                        <p class="font-bold">Info:</p>
+                        <p class="text-sm">{{ message }}</p>
+                    </div>
+                {% endif %}
             {% endfor %}
         </div>
     {% endif %}
+    {# ----------------------------------------------------------- #}
 
+    <h2 class="text-3xl font-bold text-yellow-500 mb-8 border-b border-gray-700 pb-2">CHOOSE YOUR REALM, TARNISHED</h2>
+    
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-6 lg:gap-8 w-full">
         {% for game in GAMES_LIST %}
         <a href="{% url 'game_dashboard' game_slug=game.slug %}" class="block bg-gray-800/70 hover:bg-gray-700/80 p-4 rounded-xl shadow-lg border border-gray-700 hover:border-yellow-500 transition duration-300 text-center transform hover:scale-105">
@@ -34,7 +50,6 @@
         {% endfor %}
     </div>
     
-    <!-- 🚀 FIX: เพิ่มส่วน ABOUT US ที่นี่ -->
     {% include 'ashenone_app/about_us.html' %}
 </div>
 

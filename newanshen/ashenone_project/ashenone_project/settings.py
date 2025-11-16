@@ -1,23 +1,12 @@
-"""
-Django settings for ashenone_project project.
-(ไฟล์นี้คือไฟล์ที่ถูกต้องและสมบูรณ์ที่สุดสำหรับการตั้งค่าฐานข้อมูล)
-"""
-
 from pathlib import Path
 import os
-import dj_database_url # 
+import dj_database_url 
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
-# Quick-start development settings - unsuitable for production
 SECRET_KEY = 'django-insecure-dummy-key-for-ashenone-project' 
 DEBUG = True 
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '.onrender.com', '[::1]'] 
-
-
-# Application definition
 
 INSTALLED_APPS = [
     'django.contrib.admin',

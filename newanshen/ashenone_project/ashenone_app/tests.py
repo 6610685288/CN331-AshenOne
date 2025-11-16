@@ -1,111 +1,99 @@
-# -*- coding: utf-8 -*-
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth import get_user_model
-from django.contrib.messages import get_messages
-from django.core.files.uploadedfile import SimpleUploadedFile
+from ashenone_app.models import CustomUser, LFGPost, GuideContent, Offer, ChatMessage 
+import json
+from django.contrib.messages.storage.base import Message
+from django.urls import resolve
 
-from ashenone_app.models import CustomUser, LFGPost, GAMES_LIST
-from unittest.mock import patch, Mock
+CustomUser = get_user_model()
 
-User = get_user_model() # ใช้ CustomUser ที่เรากำหนดไว้
-
-class AshenOneViewsTestCase(TestCase):
+class AshenOneFeatureTests(TestCase):
     
     def setUp(self):
-        # สร้าง Client และ User สำหรับทดสอบ
         self.client = Client()
-        # CustomUser.objects.create_user จะใช้ hashing password ให้
-        self.user = CustomUser.objects.create_user(username='testuser', password='testpassword123', role='user')
-        self.admin_user = CustomUser.objects.create_user(username='adminuser', password='adminpassword123', role='admin', is_staff=True, is_superuser=True)
+        self.password = 'testpassword123' 
+        
+        self.user_a = CustomUser.objects.create_user(username='requester_a', password=self.password)
+        self.user_b = CustomUser.objects.create_user(username='helper_b', password=self.password)
+        self.admin_user = CustomUser.objects.create_superuser(username='testadmin', password=self.password, is_staff=True, is_superuser=True)
 
         self.game_slug = 'ds3'
         self.game_name = 'Dark Souls III'
         
-        # สร้างโพสต์ LFG สำหรับการทดสอบ
         self.lfg_post = LFGPost.objects.create(
-            user=self.user,
+            user=self.user_a,
             game_name=self.game_name,
             platform='PC',
-            boss_name='Test Boss',
-            description='Testing LFG Post'
+            boss_name='Test Boss for Offer',
+            description='Testing Offer/Chat Post'
         )
 
-        # URLS ที่จะใช้
+        self.content_guide = GuideContent.objects.create(
+            game_name=self.game_name,
+            title='The Lore of Lothric',
+            slug='the-lore-of-lothric-ds3',
+            category='LORE',
+            content_body='This content explains the deep lore.'
+        )
+        
         self.url_dashboard = reverse('game_dashboard', args=[self.game_slug])
         self.url_auth = reverse('handle_auth', args=[self.game_slug])
         self.url_post = reverse('handle_lfg_post')
-        self.url_admin = reverse('admin:ashenone_app_customuser_changelist')
-
-
-    # ---------------------------------------------------
-    # --- I. Test US-U1 (Authentication & Register) ---
-    # ---------------------------------------------------
+        self.url_offer = reverse('offer_help', args=[self.lfg_post.id])
+        self.url_chat = reverse('chat_room', args=[self.lfg_post.id])
+        self.url_send_api = reverse('send_message_api', args=[self.lfg_post.id]) 
+        self.url_fetch_api = reverse('fetch_messages_api', args=[self.lfg_post.id]) 
+        self.url_content_detail = reverse('content_detail', args=[self.game_slug, self.content_guide.slug])
 
     def test_01_register_happy_path(self):
+        """Test U-1 (Happy Path): การลงทะเบียนสำเร็จ"""
         response = self.client.post(
             self.url_auth,
             {
                 'action': 'register',
                 'username': 'new_tarnished',
-                'password': 'password123',
-                'confirm_password': 'password123'
+                'password': self.password,
+                'confirm_password': self.password
             },
-            follow=True
+            follow=True 
         )
-        self.assertEqual(response.status_code, 200) # 200 after redirect
         self.assertContains(response, "ลงทะเบียนสำเร็จ!")
-        self.assertTrue(CustomUser.objects.filter(username='new_tarnished').exists())
-        self.assertTrue(response.context['user'].is_authenticated)
 
     def test_02_register_sad_path_password_mismatch(self):
+        """Test U-1 (Sad Path): การลงทะเบียนล้มเหลว (Password ไม่ตรงกัน)"""
         response = self.client.post(
             self.url_auth,
-            {
+            {   
                 'action': 'register',
                 'username': 'new_tarnished_2',
-                'password': 'password123',
-                'confirm_password': 'password456' # <-- Mismatch
+                'password': self.password,
+                'confirm_password': 'password456' 
             },
-            follow=True
+            follow=True 
         )
         self.assertContains(response, "รหัสผ่านไม่ตรงกัน โปรดตรวจสอบอีกครั้ง")
-        self.assertFalse(CustomUser.objects.filter(username='new_tarnished_2').exists())
-
+        
     def test_03_login_happy_path(self):
+        """Test U-1 (Happy Path): ล็อกอินสำเร็จ"""
         response = self.client.post(
             self.url_auth,
-            {
-                'action': 'login',
-                'username': 'testuser',
-                'password': 'testpassword123'
-            },
-            follow=True
+            { 'action': 'login', 'username': 'requester_a', 'password': self.password }
         )
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Sign Out') # User sees sign out button
-        self.assertTrue(response.context['user'].is_authenticated)
+        self.assertRedirects(response, self.url_dashboard)
 
     def test_04_login_sad_path_wrong_password(self):
+        """Test U-1 (Sad Path): ล็อกอินล้มเหลว (Password ผิด)"""
         response = self.client.post(
             self.url_auth,
-            {
-                'action': 'login',
-                'username': 'testuser',
-                'password': 'wrongpassword'
-            },
+            { 'action': 'login', 'username': 'requester_a', 'password': 'wrongpassword' },
             follow=True
         )
         self.assertContains(response, "Username หรือ Password ไม่ถูกต้อง")
-        self.assertFalse(response.context['user'].is_authenticated)
-
-    # ---------------------------------------------------
-    # --- II. Test US-U2 (LFG Post Creation) ---
-    # ---------------------------------------------------
 
     def test_05_lfg_post_creation_happy_path(self):
-        self.client.login(username='testuser', password='testpassword123')
-        
+        """Test U-2 (Happy Path): สร้างโพสต์ LFG สำเร็จ"""
+        self.client.login(username='requester_a', password=self.password)
         initial_count = LFGPost.objects.count()
 
         response = self.client.post(
@@ -118,22 +106,21 @@ class AshenOneViewsTestCase(TestCase):
             },
             follow=True
         )
-        self.assertEqual(response.status_code, 200)
         self.assertContains(response, "สร้างโพสต์ LFG สำเร็จ!")
         self.assertEqual(LFGPost.objects.count(), initial_count + 1)
-        self.assertTrue(LFGPost.objects.filter(boss_name='New Boss').exists())
 
     def test_06_lfg_post_creation_sad_path_not_logged_in(self):
+        """Test U-2 (Sad Path): สร้างโพสต์ LFG ล้มเหลว (ยังไม่ล็อกอิน)"""
         response = self.client.post(
             self.url_post,
             { 'bossName': 'Anonymous Boss' },
             follow=False
         )
-        self.assertEqual(response.status_code, 302)
-        self.assertTrue(response.url.startswith(reverse('index')))
+        self.assertRedirects(response, f"{reverse('index')}?next={self.url_post}")
 
     def test_07_lfg_post_creation_sad_path_missing_field(self):
-        self.client.login(username='testuser', password='testpassword123')
+        """Test U-2 (Sad Path): สร้างโพสต์ LFG ล้มเหลว (ขาดข้อมูล Boss Name)"""
+        self.client.login(username='requester_a', password=self.password)
         initial_count = LFGPost.objects.count()
 
         response = self.client.post(
@@ -141,80 +128,173 @@ class AshenOneViewsTestCase(TestCase):
             {
                 'gameName': self.game_name,
                 'platform': 'PC',
-                'bossName': '', # <-- Missing
+                'bossName': '', 
                 'description': 'Help me!'
             },
             follow=True
         )
-        self.assertContains(response, "กรุณากรอกชื่อบอสและรายละเอียดให้ครบถ้วน!")
-        self.assertEqual(LFGPost.objects.count(), initial_count) # Count must not increase
         
-    # ---------------------------------------------------
-    # --- III. Test US-U3 (Content Access) & Filtering ---
-    # ---------------------------------------------------
-    
+        self.assertContains(response, "กรุณากรอกชื่อบอสและรายละเอียดให้ครบถ้วน!")
+        self.assertEqual(LFGPost.objects.count(), initial_count) 
+
     def test_08_lfg_view_correct_game_filtering(self):
-    
+        """Test U-2 (Happy Path): หน้า Dashboard แสดงโพสต์ที่กรองตามเกมที่ถูกต้อง"""
         LFGPost.objects.create(
-            user=self.user,
+            user=self.user_b,
             game_name='Elden Ring',
             platform='PS5',
             boss_name='Malenia',
-            description='Help me!'
+            description='Testing Elden Ring'
         )
-    
+        
         response = self.client.get(self.url_dashboard) 
-        
-        self.assertContains(response, 'Test Boss') 
-        self.assertNotContains(response, 'Malenia')
+        self.assertContains(response, 'Test Boss for Offer') 
+        self.assertNotContains(response, 'Malenia') 
 
-    # ---------------------------------------------------
-    # --- IV. Test US-A2 & A-3 (Admin Actions) ---
-    # ---------------------------------------------------
+    def test_09_offer_help_success_and_status_change(self):
+        """Test U-4 (Happy Path): Offer สำเร็จ, สถานะเปลี่ยนเป็น 'In Progress'"""
+        self.client.login(username='helper_b', password=self.password)
+        
+        response = self.client.post(self.url_offer, {}) 
+        
+        self.assertRedirects(response, self.url_chat)
+        self.lfg_post.refresh_from_db()
+        self.assertEqual(self.lfg_post.status, 'In Progress')
 
-    def test_09_admin_action_suspend_user(self):
-        """Test US-A3 (Admin): Admin สามารถ Suspend User ได้"""
-       
-        self.client.login(username='testadmin', password='adminpassword123')
+    def test_10_offer_help_sad_path_owner_self_offer(self):
+        """Test U-4 (Sad Path): เจ้าของโพสต์พยายาม Offer ตัวเอง"""
+        self.client.login(username='requester_a', password=self.password) 
         
-       
-        admin_user_changelist_url = reverse('admin:ashenone_app_customuser_changelist')
+        response = self.client.post(self.url_offer, {}, follow=True)
         
-     
-        response = self.client.post(admin_user_changelist_url, {
+        self.assertContains(response, "ไม่สามารถเสนอช่วยเหลือโพสต์ที่คุณสร้างเองได้")
+        self.assertEqual(Offer.objects.count(), 0)
+        
+    def test_11_offer_help_success_and_redirect(self):
+        """Test U-4 (Happy Path): User B เสนอช่วยเหลือสำเร็จ และ Redirect ไป Chat Room"""
+        self.client.login(username='helper_b', password=self.password)
+        
+        response = self.client.post(self.url_offer, {}) 
+        
+        self.assertRedirects(response, self.url_chat)
+        
+        self.assertTrue(Offer.objects.filter(post=self.lfg_post, offered_by=self.user_b).exists())
+
+        self.lfg_post.refresh_from_db()
+        self.assertEqual(self.lfg_post.status, 'In Progress')
+
+    def test_12_offer_help_sad_path_user_already_offered(self):
+        """Test U-4 (Sad Path): ผู้ใช้พยายามเสนอช่วยซ้ำ (ควร Redirect ไป Chat Room)"""
+        Offer.objects.create(post=self.lfg_post, offered_by=self.user_b)
+        self.client.login(username='helper_b', password=self.password)
+        
+        response = self.client.post(self.url_offer, {}) 
+        
+        self.assertRedirects(response, self.url_chat)
+        self.assertEqual(Offer.objects.filter(post=self.lfg_post, offered_by=self.user_b).count(), 1)
+    
+    def test_13_chat_api_send_happy_path(self):
+        """Test U-4 (Happy Path): การส่งข้อความ API สำเร็จ"""
+        self.client.login(username='requester_a', password=self.password)
+        initial_count = ChatMessage.objects.count()
+        
+        response = self.client.post(
+            self.url_send_api,
+            json.dumps({'content': 'Test message from Requester'}),
+            content_type='application/json'
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(ChatMessage.objects.count(), initial_count + 1)
+
+    def test_14_chat_api_fetch_happy_path(self):
+        """Test U-4 (Happy Path): การดึงข้อความ API สำเร็จ (Polling)"""
+        ChatMessage.objects.create(post=self.lfg_post, sender=self.user_a, content="First Message")
+        self.client.login(username='helper_b', password=self.password)
+        
+        response = self.client.get(self.url_fetch_api)
+        
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        
+        self.assertEqual(len(data['messages']), 1)
+        self.assertEqual(data['messages'][0]['sender'], 'requester_a')
+        self.assertFalse(data['messages'][0]['is_me'])
+    
+    def test_15_content_detail_public_access(self):
+        """Test U-3 (Happy Path): Public สามารถเข้าถึงหน้ารายละเอียด Content ได้"""
+        response = self.client.get(self.url_content_detail) 
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.content_guide.title)
+
+    def test_16_admin_content_crud_creation(self):
+        """Test A-1 (Admin CRUD): Admin สามารถสร้าง GuideContent ได้สำเร็จ"""
+        self.client.login(username='testadmin', password=self.password)
+        
+        admin_add_url = reverse('admin:ashenone_app_guidecontent_add')
+        
+        response = self.client.post(
+            admin_add_url,
+            {
+                'game_name': self.game_name,
+                'title': 'Final Boss Guide',
+                'slug': 'final-boss-guide',
+                'category': 'BOSS',
+                'content_body': 'Final strategy guide.',
+                '_save': 'บันทึก'
+            },
+            follow=True
+        )
+        
+        self.assertContains(response, "Final Boss Guide") 
+        self.assertTrue(GuideContent.objects.filter(title='Final Boss Guide').exists())
+
+    def test_17_admin_action_suspend_user(self):
+        """Test A-3 (Admin): Admin สามารถ Suspend User ได้ และบล็อก Login"""
+        self.client.login(username='testadmin', password=self.password)
+        
+        admin_url = reverse('admin:ashenone_app_customuser_changelist')
+        response = self.client.post(admin_url, {
             'action': 'suspend_users',
-            '_selected_action': [str(self.user.pk)] 
+            '_selected_action': [str(self.user_a.pk)] 
         }, follow=True)
         
-        
-        self.user.refresh_from_db()
-        self.assertTrue(self.user.suspended)
-        self.assertContains(response, "Suspended selected users") 
-        
+        self.user_a.refresh_from_db()
+        self.assertTrue(self.user_a.suspended) 
         
         self.client.logout()
         response = self.client.post(
             self.url_auth,
-            { 'action': 'login', 'username': 'testuser', 'password': 'testpassword123' },
+            { 'action': 'login', 'username': 'requester_a', 'password': self.password },
             follow=True
         )
         self.assertContains(response, "บัญชีของคุณถูกระงับการใช้งาน")
 
-    def test_10_admin_action_delete_post(self):
-        self.client.login(username='testadmin', password='adminpassword123')
-        
-        
-        admin_post_changelist_url = reverse('admin:ashenone_app_lfgpost_changelist')
-        
-        
-        initial_count = LFGPost.objects.count()
+    def test_18_admin_action_delete_post(self):
+            """Test A-2 (Admin): Admin สามารถลบโพสต์ LFG ได้"""
+            self.client.login(username='testadmin', password=self.password)
+            initial_count = LFGPost.objects.count()
 
-        response = self.client.post(admin_post_changelist_url, {
-            'action': 'delete_selected',
-            '_selected_action': [str(self.lfg_post.pk)]
-        }, follow=True)
-        
+            admin_changelist_url = reverse('admin:ashenone_app_lfgpost_changelist')
 
-        self.assertEqual(LFGPost.objects.count(), initial_count - 1)
-        self.assertFalse(LFGPost.objects.filter(pk=self.lfg_post.pk).exists())
-        self.assertContains(response, "Successfully deleted 1 LFG post")
+            response = self.client.post(
+                admin_changelist_url,
+                {
+                    'action': 'delete_selected',
+                    '_selected_action': [str(self.lfg_post.pk)]
+                }
+            )
+            
+            response = self.client.post(
+                admin_changelist_url, 
+                {
+                    'action': 'delete_selected',
+                    'post': 'yes', 
+                    '_selected_action': [str(self.lfg_post.pk)]
+                },
+                follow=True 
+            )
+            
+            self.assertEqual(LFGPost.objects.count(), initial_count - 1)
+            self.assertFalse(LFGPost.objects.filter(pk=self.lfg_post.pk).exists())

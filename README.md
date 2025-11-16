@@ -20,6 +20,12 @@ ITERATION 1 (ไฟล์เว็ป รายงาน ลิงก์github) 
 
 แก้ไข USER STORIES บางส่วนที่ไม่ครอบคลุม ทำการเขียนเว็ปและ test ดูได้ในรายงานตามที่แนบ
 
-ITERATION 2 (On process)
+ITERATION 2 
+
+1. https://cn331-ashenone-1-p0fj.onrender.com
+2. https://drive.google.com/file/d/1-THcK7Jg4LztnN2ePIgfbzsZzSH58P7Z/view
+3. https://github.com/6610685288/CN331-AshenOne
+
+เพิ่มปุ่ม OFFER HELP เพิ่ม CHAT เพิ่มหน้า LORE AND GUIDE
 
 ITERATION 3 (On process)

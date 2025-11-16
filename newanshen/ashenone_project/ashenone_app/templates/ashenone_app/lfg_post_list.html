@@ -3,30 +3,91 @@
 <div class="p-6 bg-gray-800 rounded-xl shadow-2xl border border-gray-700 w-full">
     <h2 class="text-2xl font-bold text-yellow-500 mb-4 border-b border-gray-700 pb-2">ACTIVE HELP REQUESTS 📜</h2>
     
-    {% if posts %}
+    {% if posts.object_list %}
         <div class="space-y-4">
-            {% for post in posts %}
+            {% for post in posts.object_list %}
             <div class="p-4 bg-gray-700 rounded-lg border border-gray-600 shadow-md">
                 <div class="flex justify-between items-start">
-                    <h3 class="text-xl font-semibold text-white">
-                        {{ post.boss_name }}
-                        <span class="ml-2 text-xs font-medium px-2 py-0.5 rounded-full {% if post.status == 'Active' %}bg-green-600{% else %}bg-red-600{% endif %} text-white">
-                            {{ post.status }}
-                        </span>
-                    </h3>
-                    <span class="text-sm text-yellow-400 font-mono">{{ post.platform }}</span>
+                    
+                    {# --- FIX 1: ใช้ flex-col เพื่อจัดการส่วนหัว --- #}
+                    <div class="flex flex-col w-full pr-4"> 
+                        <div class="flex items-center space-x-2">
+                            <h3 class="text-xl font-semibold text-white flex-grow truncate">
+                                {{ post.boss_name }}
+                            </h3>
+                            
+                            {# --- FIX 2: เพิ่ม whitespace-nowrap และ flex-shrink-0 --- #}
+                            <span class="ml-2 text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap flex-shrink-0
+                                {% if post.status == 'Active' %}bg-green-600{% elif post.status == 'In Progress' %}bg-yellow-600 text-gray-900{% else %}bg-red-600{% endif %} text-white">
+                                {{ post.status }}
+                            </span>
+                        </div>
+                        <p class="text-gray-300 mt-1 text-sm">Game: {{ post.game_name }}</p>
+                    </div>
+
+                    <span class="text-sm text-yellow-400 font-mono whitespace-nowrap flex-shrink-0">
+                        {{ post.platform }}
+                    </span>
                 </div>
-                <p class="text-gray-300 mt-1">Game: {{ post.game_name }}</p>
+                
                 <p class="text-gray-400 text-sm mt-2 italic">{{ post.description }}</p>
-                <div class="text-xs text-gray-500 mt-2 border-t border-gray-600 pt-2">
-                    Posted by: {{ post.user.username }} | At: {{ post.created_at|date:"Y-m-d" }}
+                <div class="text-xs text-gray-500 mt-2 border-t border-gray-600 pt-2 flex justify-between items-center">
+                    <div>
+                        Posted by: {{ post.user.username }} | At: {{ post.created_at|date:"Y-m-d" }}
+                    </div>
+                    
+                    {% comment %} --- ปุ่ม Offer Help / Go to Chat Logic --- {% endcomment %}
+                    {% if request.user.is_authenticated and post.user != request.user %}
+                        
+                        {% if post.current_user_offers %} 
+                            <a href="{% url 'chat_room' post_id=post.id %}" class="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-1 rounded-full transition duration-200">
+                                Go to Chat 💬
+                            </a>
+                        {% else %}
+                            <form method="POST" action="{% url 'offer_help' post_id=post.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1 rounded-full transition duration-200">
+                                    Offer Help
+                                </button>
+                            </form>
+                        {% endif %}
+                        
+                    {% endif %}
                 </div>
             </div>
             {% endfor %}
+
+            {# --- NEW: Pagination UI for LFG Posts --- #}
+            {% if posts.has_other_pages %}
+                <div class="flex justify-center space-x-2 pt-3">
+                    
+                    {# Previous Button #}
+                    {% if posts.has_previous %}
+                        <a href="?posts_page={{ posts.previous_page_number }}{% if content_list.number > 1 %}&content_page={{ content_list.number }}{% endif %}" 
+                           class="px-3 py-1 bg-gray-700 text-yellow-500 rounded hover:bg-gray-600">&larr; Prev</a>
+                    {% else %}
+                        <span class="px-3 py-1 bg-gray-700/50 text-gray-500 rounded cursor-not-allowed">&larr; Prev</span>
+                    {% endif %}
+
+                    {# Current Page Number #}
+                    <span class="px-3 py-1 bg-yellow-600 text-gray-900 rounded font-bold">
+                        Page {{ posts.number }} of {{ posts.paginator.num_pages }}
+                    </span>
+
+                    {# Next Button #}
+                    {% if posts.has_next %}
+                        <a href="?posts_page={{ posts.next_page_number }}{% if content_list.number > 1 %}&content_page={{ content_list.number }}{% endif %}" 
+                           class="px-3 py-1 bg-gray-700 text-yellow-500 rounded hover:bg-gray-600">Next &rarr;</a>
+                    {% else %}
+                        <span class="px-3 py-1 bg-gray-700/50 text-gray-500 rounded cursor-not-allowed">Next &rarr;</span>
+                    {% endif %}
+                </div>
+            {% endif %}
+
         </div>
     {% else %}
         <p class="text-gray-400 italic text-center py-8">
             No active requests found. Create a new one to summon help!
-        </D>
+        </p>
     {% endif %}
 </div>

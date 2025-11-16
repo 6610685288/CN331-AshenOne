@@ -1,12 +1,9 @@
-
-"""
-Models (Data Logic) - AshenOne Django App (ORM Version)
-(ไฟล์นี้คือไฟล์ที่ถูกต้องและสมบูรณ์ที่สุด)
-"""
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.contrib.auth import get_user_model
+import uuid
+from django.db.models import Q
 
-# --- GAME CONSTANTS (แหล่งข้อมูลสำหรับ View) ---
 GAMES_LIST = [
     {'name': 'Dark Souls I', 'slug': 'ds1', 'logo_url': 'https://images2.alphacoders.com/895/895681.jpg'},
     {'name': 'Dark Souls II', 'slug': 'ds2', 'logo_url': 'https://i.redd.it/nfw7fzk7ye5b1.jpg'},
@@ -18,17 +15,18 @@ GAMES_LIST = [
     {'name': 'Elden Ring: Nightreign', 'slug': 'elden-ring-nightreign', 'logo_url': 'https://i.pinimg.com/736x/a6/ee/f2/a6eef2a207daf54c78923542b45d2163.jpg'},
 ]
 
-# --- 1. User Model (US-U1) ---
+GAME_CHOICES = [(game['name'], game['name']) for game in GAMES_LIST] 
+PLATFORM_CHOICES = [('PC', 'PC'), ('PS5', 'PlayStation 5'), ('XBOX', 'Xbox Series X/S')]
+STATUS_CHOICES = (
+    ('Active', 'Active'),
+    ('In Progress', 'In Progress'),
+    ('Completed', 'Completed'), 
+)
+
 class CustomUser(AbstractUser):
-    """
-    โมเดลผู้ใช้หลัก
-    สืบทอดจาก AbstractUser เพื่อใช้ระบบ Auth ของ Django
-    (แก้ไข related_name เพื่อแก้ SystemCheckError)
-    """
     role = models.CharField(max_length=10, choices=[('user', 'User'), ('admin', 'Admin')], default='user')
     suspended = models.BooleanField(default=False)
     
-   
     groups = models.ManyToManyField(
         'auth.Group',
         related_name='customuser_groups', 
@@ -43,11 +41,8 @@ class CustomUser(AbstractUser):
     def __str__(self):
         return self.username
 
-# --- 2. LFG Post Model (US-U2) ---
 class LFGPost(models.Model):
-    """
-    โมเดลสำหรับ LFG Posts
-    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='lfg_posts')
     game_name = models.CharField(max_length=100)
     platform = models.CharField(max_length=50)
@@ -56,5 +51,58 @@ class LFGPost(models.Model):
     status = models.CharField(max_length=10, default='Active')
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class LFGPostManager(models.Manager):
+        def get_user_related_posts(self, user):
+            return self.filter(
+                Q(user=user) | Q(offers__offered_by=user)
+            ).distinct().order_by('-created_at')
+            
+    objects = LFGPostManager() 
+
     def __str__(self):
         return f"{self.game_name} - {self.boss_name} (by {self.user.username})"
+    
+class Offer(models.Model):
+    post = models.ForeignKey(LFGPost, on_delete=models.CASCADE, related_name='offers')
+    offered_by = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='help_offered')
+    message = models.TextField(blank=True, null=True)
+    accepted = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ('post', 'offered_by') 
+
+    def __str__(self):
+        return f"Offer by {self.offered_by.username} on {self.post.boss_name}"
+
+class ChatMessage(models.Model):
+    post = models.ForeignKey(LFGPost, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='sent_messages')
+    content = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['timestamp']
+
+    def __str__(self):
+        return f"Message from {self.sender.username} on {self.post.boss_name}"
+    
+class GuideContent(models.Model):
+    CONTENT_CHOICES = (
+        ('LORE', 'Lore Summary'),
+        ('BOSS', 'Boss Guide'),
+        ('BUILD', 'Build Guide'),
+    )
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    game_name = models.CharField(max_length=100, choices=GAME_CHOICES)
+    title = models.CharField(max_length=200)
+    slug = models.SlugField(unique=True, max_length=200) 
+    category = models.CharField(max_length=10, choices=CONTENT_CHOICES)
+    content_body = models.TextField() 
+    updated_at = models.DateTimeField(auto_now=True) 
+    
+    class Meta:
+        ordering = ['game_name', 'title']
+
+    def __str__(self):
+        return f"[{self.category}] {self.title} ({self.game_name})"
