@@ -23,6 +23,19 @@ STATUS_CHOICES = (
     ('Completed', 'Completed'), 
 )
 
+REPORT_REASONS = (
+    ('TOXIC', 'ใช้ถ้อยคำหยาบคาย / Toxic'),
+    ('SPAM', 'สแปมข้อความ / โฆษณา'),
+    ('SCAM', 'หลอกลวง / โกง'),
+    ('OTHER', 'อื่นๆ'),
+)
+
+REPORT_STATUS = (
+    ('PENDING', 'รอการตรวจสอบ'),
+    ('RESOLVED', 'จัดการแล้ว'),
+    ('DISMISSED', 'ยกเลิก / ไม่มีความผิด'),
+)
+
 class CustomUser(AbstractUser):
     role = models.CharField(max_length=10, choices=[('user', 'User'), ('admin', 'Admin')], default='user')
     suspended = models.BooleanField(default=False)
@@ -106,3 +119,17 @@ class GuideContent(models.Model):
 
     def __str__(self):
         return f"[{self.category}] {self.title} ({self.game_name})"
+    
+class Report(models.Model):
+    reporter = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='reports_filed')
+    reported_user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='reports_received')
+    reason = models.CharField(max_length=20, choices=REPORT_REASONS)
+    details = models.TextField(blank=True, help_text="รายละเอียดเพิ่มเติม หรือหลักฐาน")
+    status = models.CharField(max_length=20, choices=REPORT_STATUS, default='PENDING')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Report: {self.reported_user.username} ({self.get_reason_display()})"

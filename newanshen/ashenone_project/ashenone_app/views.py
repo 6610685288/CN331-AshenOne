@@ -6,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.utils import timezone
-from .models import GAMES_LIST, LFGPost, CustomUser, Offer, ChatMessage, GuideContent 
+from .models import GAMES_LIST, LFGPost, CustomUser, Offer, ChatMessage, GuideContent, Report
 import logging
 import json
 from django.db.models import Prefetch
@@ -31,6 +31,10 @@ def game_dashboard(request, game_slug):
         return redirect('index')
 
     current_game_name = game_info['name']
+
+    posts_qs = LFGPost.objects.filter(
+        game_name=current_game_name
+    ).exclude(status='Completed').order_by('-created_at')
     
     # --- LFG POSTS LOGIC ---
     posts_qs = LFGPost.objects.filter(game_name=current_game_name).order_by('-created_at')
@@ -295,3 +299,67 @@ def content_detail(request, game_slug, content_slug):
         'current_game_name': content.game_name
     }
     return render(request, 'ashenone_app/content_detail.html', context)
+
+def user_profile(request, username):
+    profile_user = get_object_or_404(CustomUser, username=username)
+    
+    user_posts = LFGPost.objects.filter(user=profile_user).order_by('-created_at')
+    
+    helped_count = Offer.objects.filter(offered_by=profile_user).count()
+    
+    context = {
+        'profile_user': profile_user,
+        'user_posts': user_posts,
+        'helped_count': helped_count,
+    }
+    return render(request, 'ashenone_app/user_profile.html', context)
+
+@login_required(login_url='/')
+@require_POST 
+def complete_lfg_post(request, post_id):
+    post = get_object_or_404(LFGPost, id=post_id)
+    
+    if post.user != request.user:
+        messages.error(request, "คุณไม่มีสิทธิ์ปิดงานโพสต์นี้")
+        return redirect('chat_room', post_id=post.id)
+    
+    post.status = 'Completed'
+    post.save()
+    
+    messages.success(request, "ปิดงานเรียบร้อย! ขอบคุณสำหรับการผจญภัย")
+    
+    return redirect('chat_room', post_id=post.id)
+
+@login_required(login_url='/')
+@require_POST
+def report_user(request, username):
+    """
+    Action: รายงานผู้ใช้ (Report User)
+    """
+    target_user = get_object_or_404(CustomUser, username=username)
+    
+    # ป้องกันการ Report ตัวเอง
+    if target_user == request.user:
+        messages.error(request, "คุณไม่สามารถรายงานตัวเองได้")
+        return redirect('user_profile', username=username)
+        
+    reason = request.POST.get('reason')
+    details = request.POST.get('details')
+    
+    if not reason:
+        messages.error(request, "กรุณาเลือกเหตุผลในการรายงาน")
+        return redirect('user_profile', username=username)
+        
+    try:
+        Report.objects.create(
+            reporter=request.user,
+            reported_user=target_user,
+            reason=reason,
+            details=details
+        )
+        messages.success(request, f"รายงานผู้ใช้ {target_user.username} เรียบร้อยแล้ว ทางทีมงานจะเร่งตรวจสอบ")
+    except Exception as e:
+        messages.error(request, "เกิดข้อผิดพลาดในการส่งรายงาน")
+        logger.error(f"Report Error: {e}")
+        
+    return redirect('user_profile', username=username)

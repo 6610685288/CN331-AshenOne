@@ -1,0 +1,124 @@
+{% extends 'ashenone_app/base.html' %}
+{% load static %}
+
+{% block title %}Profile: {{ profile_user.username }}{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-4xl pt-10 pb-10">
+    
+
+    <div class="bg-gray-800 rounded-xl shadow-2xl border border-gray-700 p-8 mb-8 flex flex-col md:flex-row items-center md:items-start gap-6 relative">
+        
+        <div class="w-24 h-24 rounded-full bg-gray-700 border-4 border-yellow-500 flex items-center justify-center text-4xl shadow-lg">
+            👾
+        </div>
+        
+        <div class="flex-grow text-center md:text-left">
+            <h1 class="text-4xl font-bold text-white mb-2">{{ profile_user.username }}</h1>
+            <div class="flex flex-wrap justify-center md:justify-start gap-3 mb-4">
+                <span class="px-3 py-1 rounded-full text-xs font-bold bg-blue-900 text-blue-200 border border-blue-700">
+                    Role: {{ profile_user.role|title }}
+                </span>
+                <span class="px-3 py-1 rounded-full text-xs font-bold bg-gray-700 text-gray-300 border border-gray-600">
+                    Joined: {{ profile_user.date_joined|date:"M Y" }}
+                </span>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4 max-w-xs mx-auto md:mx-0">
+                <div class="bg-gray-900/50 p-3 rounded-lg border border-gray-700 text-center">
+                    <span class="block text-2xl font-bold text-yellow-500">{{ user_posts.count }}</span>
+                    <span class="text-xs text-gray-400 uppercase">Posts Created</span>
+                </div>
+                <div class="bg-gray-900/50 p-3 rounded-lg border border-gray-700 text-center">
+                    <span class="block text-2xl font-bold text-green-500">{{ helped_count }}</span>
+                    <span class="text-xs text-gray-400 uppercase">Helped Others</span>
+                </div>
+            </div>
+        </div>
+
+        {% if request.user.is_authenticated and request.user != profile_user %}
+        <div class="absolute top-4 right-4">
+            <button onclick="document.getElementById('report-modal').classList.remove('hidden')" 
+                    class="text-gray-500 hover:text-red-500 transition duration-200" title="Report User">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+    <h2 class="text-2xl font-bold text-gray-400 mb-4 border-b border-gray-700 pb-2">Recent Adventures</h2>
+    <div class="space-y-4">
+        {% for post in user_posts %}
+        <div class="p-4 bg-gray-800/50 rounded-lg border border-gray-700 flex justify-between items-center hover:bg-gray-700 transition">
+            <div>
+                <h3 class="text-lg font-semibold text-white">{{ post.boss_name }} <span class="text-sm text-gray-500">({{ post.game_name }})</span></h3>
+                <p class="text-xs text-gray-400">{{ post.created_at|date:"d M Y, H:i" }}</p>
+            </div>
+            <div>
+                <span class="px-2 py-1 rounded text-xs font-bold 
+                    {% if post.status == 'Completed' %}bg-green-900 text-green-200{% elif post.status == 'Active' %}bg-red-900 text-red-200{% else %}bg-yellow-900 text-yellow-200{% endif %}">
+                    {{ post.status }}
+                </span>
+            </div>
+        </div>
+        {% empty %}
+        <p class="text-gray-500 italic">No adventures recorded yet.</p>
+        {% endfor %}
+    </div>
+    
+    <div class="mt-8 text-center">
+        <a href="javascript:history.back()" class="text-yellow-500 hover:text-yellow-400 underline">Back</a>
+    </div>
+
+</div>
+
+<div id="report-modal" class="hidden fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50">
+    <div class="bg-gray-800 p-6 rounded-xl border border-red-700 shadow-2xl w-full max-w-md mx-4">
+        <h3 class="text-2xl font-bold text-red-500 mb-4">Report {{ profile_user.username }}</h3>
+        
+        <form method="POST" action="{% url 'report_user' username=profile_user.username %}">
+            {% csrf_token %}
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">เหตุผลในการรายงาน</label>
+                    <div class="space-y-2">
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="radio" name="reason" value="TOXIC" required class="form-radio text-red-600">
+                            <span class="text-gray-300">ใช้ถ้อยคำหยาบคาย / Toxic</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="radio" name="reason" value="SPAM" class="form-radio text-red-600">
+                            <span class="text-gray-300">สแปมข้อความ / โฆษณา</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="radio" name="reason" value="SCAM" class="form-radio text-red-600">
+                            <span class="text-gray-300">หลอกลวง / โกง</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="radio" name="reason" value="OTHER" class="form-radio text-red-600">
+                            <span class="text-gray-300">อื่นๆ</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">รายละเอียดเพิ่มเติม (ถ้ามี)</label>
+                    <textarea name="details" rows="3" class="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white focus:border-red-500 outline-none" placeholder="อธิบายสิ่งที่เกิดขึ้น..."></textarea>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end space-x-3">
+                <button type="button" onclick="document.getElementById('report-modal').classList.add('hidden')" 
+                        class="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg transition">
+                    Cancel
+                </button>
+                <button type="submit" class="px-4 py-2 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg transition">
+                    Submit Report
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

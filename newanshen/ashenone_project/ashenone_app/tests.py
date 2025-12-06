@@ -1,7 +1,7 @@
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth import get_user_model
-from ashenone_app.models import CustomUser, LFGPost, GuideContent, Offer, ChatMessage 
+from ashenone_app.models import CustomUser, LFGPost, GuideContent, Offer, ChatMessage, Report
 import json
 from django.contrib.messages.storage.base import Message
 from django.urls import resolve
@@ -45,6 +45,7 @@ class AshenOneFeatureTests(TestCase):
         self.url_send_api = reverse('send_message_api', args=[self.lfg_post.id]) 
         self.url_fetch_api = reverse('fetch_messages_api', args=[self.lfg_post.id]) 
         self.url_content_detail = reverse('content_detail', args=[self.game_slug, self.content_guide.slug])
+        self.url_complete = reverse('complete_lfg_post', args=[self.lfg_post.id])
 
     def test_01_register_happy_path(self):
         """Test U-1 (Happy Path): การลงทะเบียนสำเร็จ"""
@@ -298,3 +299,72 @@ class AshenOneFeatureTests(TestCase):
             
             self.assertEqual(LFGPost.objects.count(), initial_count - 1)
             self.assertFalse(LFGPost.objects.filter(pk=self.lfg_post.pk).exists())
+    
+    def test_19_profile_view_happy_path(self):
+        """Test U-5 (Happy Path): เข้าดูหน้า Profile ของ User A ได้สำเร็จ"""
+        url = reverse('user_profile', args=['requester_a'])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "requester_a")
+        self.assertContains(response, "Role: User")
+
+    def test_20_profile_view_sad_path_user_not_found(self):
+        """Test U-5 (Sad Path): เข้าดู Profile ของคนที่ไม่มีจริง (404)"""
+        url = reverse('user_profile', args=['unknown_user'])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
+
+    # --- Complete Post (U-2 Maintenance) ---
+
+    def test_21_complete_post_happy_path_owner(self):
+        """Test (Happy Path): เจ้าของโพสต์กด Complete ได้สำเร็จ"""
+        self.client.login(username='requester_a', password=self.password)
+        response = self.client.post(self.url_complete, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.lfg_post.refresh_from_db()
+        self.assertEqual(self.lfg_post.status, 'Completed')
+
+    def test_22_complete_post_sad_path_non_owner(self):
+        """Test (Sad Path): คนอื่น (Helper) พยายามกด Complete (ต้องถูกปฏิเสธ)"""
+        self.client.login(username='helper_b', password=self.password)
+        response = self.client.post(self.url_complete, follow=True)
+        self.lfg_post.refresh_from_db()
+        self.assertNotEqual(self.lfg_post.status, 'Completed')
+        self.assertContains(response, "คุณไม่มีสิทธิ์ปิดงานโพสต์นี้")
+
+    # --- Report System (A-4) ---
+
+    def test_23_report_user_happy_path(self):
+        """Test A-4 (Happy Path): รายงานผู้ใช้สำเร็จ"""
+        self.client.login(username='helper_b', password=self.password)
+        report_url = reverse('report_user', args=['requester_a'])
+        response = self.client.post(report_url, {
+            'reason': 'TOXIC',
+            'details': 'User was rude in chat.'
+        }, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "รายงานผู้ใช้ requester_a เรียบร้อยแล้ว")
+        self.assertTrue(Report.objects.filter(reported_user=self.user_a, reason='TOXIC').exists())
+
+    def test_24_report_user_sad_path_self_report(self):
+        """Test A-4 (Sad Path): พยายามรายงานตัวเอง (ต้องถูกปฏิเสธ)"""
+        self.client.login(username='helper_b', password=self.password)
+        report_url = reverse('report_user', args=['helper_b']) 
+        response = self.client.post(report_url, {
+            'reason': 'SPAM',
+            'details': 'Testing.'
+        }, follow=True)
+        self.assertContains(response, "คุณไม่สามารถรายงานตัวเองได้")
+        self.assertFalse(Report.objects.filter(reported_user=self.user_b).exists())
+
+    def test_25_report_user_sad_path_missing_reason(self):
+        """Test A-4 (Sad Path): ส่งรายงานโดยไม่เลือกเหตุผล"""
+        self.client.login(username='helper_b', password=self.password)
+        
+        report_url = reverse('report_user', args=['requester_a'])
+        response = self.client.post(report_url, {
+            'details': 'Just details without reason.'
+        }, follow=True)
+        
+        self.assertContains(response, "กรุณาเลือกเหตุผลในการรายงาน")
+        self.assertFalse(Report.objects.filter(reported_user=self.user_a).exists())

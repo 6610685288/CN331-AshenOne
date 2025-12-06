@@ -27,10 +27,19 @@ urlpatterns = [
     path('chat/<uuid:post_id>/', views.chat_room_view, name='chat_room'),
 
 
-    path('api/chat/fetch/<uuid:post_id>/', views.fetch_messages_api, name='fetch_messages_api'),
+    path('api/chat/<uuid:post_id>/fetch/', views.fetch_messages_api, name='fetch_messages_api'),
 
 
-    path('api/chat/send/<uuid:post_id>/', views.send_message_api, name='send_message_api'),
+    path('api/chat/<uuid:post_id>/send/', views.send_message_api, name='send_message_api'),
+
+
+    path('profile/<str:username>/', views.user_profile, name='user_profile'),
+
+
+    path('complete_post/<uuid:post_id>/', views.complete_lfg_post, name='complete_lfg_post'),
+
+
+    path('report/<str:username>/', views.report_user, name='report_user'),
     
   
     path('logout/', views.logout, name='logout'),

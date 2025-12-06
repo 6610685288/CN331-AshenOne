@@ -28,4 +28,10 @@ ITERATION 2
 
 เพิ่มปุ่ม OFFER HELP เพิ่ม CHAT เพิ่มหน้า LORE AND GUIDE
 
-ITERATION 3 (On process)
+ITERATION 3 
+
+1. https://cn331-ashenone-1-p0fj.onrender.com
+2. https://drive.google.com/file/d/1wK1wk4JawVYSOiB0ZLRIIuwOgK0J6hra/view?usp=sharing
+3. https://github.com/6610685288/CN331-AshenOne
+
+เพิ่มปุ่ม FINISH เพิ่มหน้า PROFILE เพิ่มระบบ REPORT

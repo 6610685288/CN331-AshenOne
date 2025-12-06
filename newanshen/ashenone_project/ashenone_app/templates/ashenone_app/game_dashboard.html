@@ -6,11 +6,9 @@
 {% block content %}
 <div class="w-full max-w-6xl">
     
-    {# 💡 เพิ่มโค้ดสำหรับแสดงข้อความจาก Django Messages Framework ที่นี่ #}
     {% if messages %}
         <div class="w-full mb-8">
             {% for message in messages %}
-                {# ใช้ Tailwind CSS เพื่อจัดรูปแบบข้อความตามประเภทของ message.tags #}
                 {% if message.tags == 'error' %}
                     <div class="p-4 bg-red-800/80 text-white border-l-4 border-red-500 rounded-lg shadow-xl" role="alert">
                         <p class="font-bold text-lg">Error: Access Denied!</p>
@@ -21,7 +19,6 @@
                         <p class="text-sm">{{ message }}</p>
                     </div>
                 {% else %}
-                    {# สำหรับ messages ประเภทอื่นๆ (info, warning) #}
                     <div class="p-4 bg-blue-800/80 text-white border-l-4 border-blue-500 rounded-lg shadow-xl" role="alert">
                         <p class="text-sm">{{ message }}</p>
                     </div>
@@ -29,7 +26,6 @@
             {% endfor %}
         </div>
     {% endif %}
-    {# ------------------ สิ้นสุดการแสดง Messages ------------------ #}
     
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full mb-8">
         <div class="lg:col-span-3 p-6 bg-gray-800 rounded-xl shadow-2xl border border-gray-700">
@@ -52,11 +48,9 @@
                 {% endif %}
             </div>
 
-            {# --- NEW: Pagination UI for Content List --- #}
             {% if content_list.has_other_pages %}
                 <div class="flex justify-center space-x-2 mt-4 pt-3 border-t border-gray-700">
                     
-                    {# Previous Button #}
                     {% if content_list.has_previous %}
                         <a href="?content_page={{ content_list.previous_page_number }}{% if posts.number > 1 %}&posts_page={{ posts.number }}{% endif %}" 
                             class="px-3 py-1 bg-gray-700 text-yellow-500 rounded hover:bg-gray-600">&larr; Prev</a>
@@ -64,12 +58,10 @@
                         <span class="px-3 py-1 bg-gray-700/50 text-gray-500 rounded cursor-not-allowed">&larr; Prev</span>
                     {% endif %}
 
-                    {# Current Page Number #}
                     <span class="px-3 py-1 bg-yellow-600 text-gray-900 rounded font-bold">
                         Page {{ content_list.number }} of {{ content_list.paginator.num_pages }}
                     </span>
 
-                    {# Next Button #}
                     {% if content_list.has_next %}
                         <a href="?content_page={{ content_list.next_page_number }}{% if posts.number > 1 %}&posts_page={{ posts.number }}{% endif %}" 
                             class="px-3 py-1 bg-gray-700 text-yellow-500 rounded hover:bg-gray-600">Next &rarr;</a>

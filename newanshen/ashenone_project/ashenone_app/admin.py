@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import CustomUser, LFGPost, GuideContent, Offer, ChatMessage
+from .models import CustomUser, LFGPost, GuideContent, Offer, ChatMessage, Report
 
 @admin.action(description='Suspend selected users')
 def suspend_users(modeladmin, request, queryset):
@@ -15,6 +15,16 @@ def set_in_progress(modeladmin, request, queryset):
 def set_completed(modeladmin, request, queryset):
     queryset.update(status='Completed')
     modeladmin.message_user(request, f"{queryset.count()} posts set to Completed.", level='success')
+
+@admin.action(description='Mark selected reports as Resolved')
+def mark_resolved(modeladmin, request, queryset):
+    queryset.update(status='RESOLVED')
+    modeladmin.message_user(request, "Selected reports have been marked as resolved.", level='success')
+
+@admin.action(description='Mark selected reports as Dismissed')
+def mark_dismissed(modeladmin, request, queryset):
+    queryset.update(status='DISMISSED')
+    modeladmin.message_user(request, "Selected reports have been dismissed.", level='success')
 
 @admin.register(CustomUser)
 class CustomUserAdmin(admin.ModelAdmin):
@@ -56,3 +66,15 @@ class ChatMessageAdmin(admin.ModelAdmin):
     list_display = ('sender', 'post', 'content', 'timestamp')
     list_filter = ('post', 'sender')
     search_fields = ('sender__username', 'content')
+
+@admin.register(Report)
+class ReportAdmin(admin.ModelAdmin):
+    list_display = ('reported_user', 'reason', 'reporter', 'status', 'created_at')
+    list_filter = ('status', 'reason', 'created_at') # ตัวกรองด้านขวาที่ช่วยให้ดูง่าย
+    search_fields = ('reported_user__username', 'reporter__username', 'details')
+    actions = [mark_resolved, mark_dismissed]
+    
+    # ทำให้ช่อง status แก้ไขได้เลยในหน้ารายการ เพื่อความรวดเร็ว
+    list_editable = ('status',)
+    
+    readonly_fields = ('created_at',)

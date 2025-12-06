@@ -9,14 +9,12 @@
             <div class="p-4 bg-gray-700 rounded-lg border border-gray-600 shadow-md">
                 <div class="flex justify-between items-start">
                     
-                    {# --- FIX 1: ใช้ flex-col เพื่อจัดการส่วนหัว --- #}
                     <div class="flex flex-col w-full pr-4"> 
                         <div class="flex items-center space-x-2">
                             <h3 class="text-xl font-semibold text-white flex-grow truncate">
                                 {{ post.boss_name }}
                             </h3>
                             
-                            {# --- FIX 2: เพิ่ม whitespace-nowrap และ flex-shrink-0 --- #}
                             <span class="ml-2 text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap flex-shrink-0
                                 {% if post.status == 'Active' %}bg-green-600{% elif post.status == 'In Progress' %}bg-yellow-600 text-gray-900{% else %}bg-red-600{% endif %} text-white">
                                 {{ post.status }}
@@ -36,7 +34,6 @@
                         Posted by: {{ post.user.username }} | At: {{ post.created_at|date:"Y-m-d" }}
                     </div>
                     
-                    {% comment %} --- ปุ่ม Offer Help / Go to Chat Logic --- {% endcomment %}
                     {% if request.user.is_authenticated and post.user != request.user %}
                         
                         {% if post.current_user_offers %} 
@@ -57,11 +54,9 @@
             </div>
             {% endfor %}
 
-            {# --- NEW: Pagination UI for LFG Posts --- #}
             {% if posts.has_other_pages %}
                 <div class="flex justify-center space-x-2 pt-3">
-                    
-                    {# Previous Button #}
+
                     {% if posts.has_previous %}
                         <a href="?posts_page={{ posts.previous_page_number }}{% if content_list.number > 1 %}&content_page={{ content_list.number }}{% endif %}" 
                            class="px-3 py-1 bg-gray-700 text-yellow-500 rounded hover:bg-gray-600">&larr; Prev</a>
@@ -74,7 +69,6 @@
                         Page {{ posts.number }} of {{ posts.paginator.num_pages }}
                     </span>
 
-                    {# Next Button #}
                     {% if posts.has_next %}
                         <a href="?posts_page={{ posts.next_page_number }}{% if content_list.number > 1 %}&content_page={{ content_list.number }}{% endif %}" 
                            class="px-3 py-1 bg-gray-700 text-yellow-500 rounded hover:bg-gray-600">Next &rarr;</a>

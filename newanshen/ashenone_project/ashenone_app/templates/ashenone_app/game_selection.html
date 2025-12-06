@@ -6,12 +6,10 @@
 {% block content %}
 
 <div class="flex flex-col items-center justify-center pt-10 pb-10 w-full max-w-6xl">
-    
-    {# 🛡️ MESSAGES FRAMEWORK DISPLAY (ข้อความแจ้งเตือน/ผิดพลาด) #}
+
     {% if messages %}
         <div class="w-full mb-8">
             {% for message in messages %}
-                {% comment %} ใช้ Tailwind CSS จัดรูปแบบตาม message tags {% endcomment %}
                 {% if message.tags == 'error' %}
                     <div class="p-4 bg-red-800/90 text-white border-l-4 border-red-500 rounded-lg shadow-2xl transition duration-300 transform hover:scale-[1.01]" role="alert">
                         <p class="font-bold">Access Denied:</p>
@@ -31,7 +29,6 @@
             {% endfor %}
         </div>
     {% endif %}
-    {# ----------------------------------------------------------- #}
 
     <h2 class="text-3xl font-bold text-yellow-500 mb-8 border-b border-gray-700 pb-2">CHOOSE YOUR REALM, TARNISHED</h2>
     
